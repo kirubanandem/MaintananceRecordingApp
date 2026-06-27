@@ -234,6 +234,22 @@ service cloud.firestore {
 
 ---
 
+## 24. Implementation Checklist
+
+### ✅ Completed (Latest Build)
+- [x] **Store Hierarchy**: Physical nesting under Stores implemented.
+- [x] **Admin Corrections**: Editable Opening Stock and Min Qty for authorized roles.
+- [x] **Security rules**: Privilege escalation protection and activation enforcement.
+- [x] **Help & Manuals**: Integrated step-by-step guides for all features.
+- [x] **UI Polish**: Version display in Profile; developer credits on Login.
+- [x] **Manual Updates**: "Check for updates" button in Profile wired to UpdateChecker.
+- [x] **Sync Manager**: Cascading updates for Store/Wardrobe renames.
+- [x] **CSV Importer**: Robust regex-based 8-column store-aware import with caching.
+- [x] **Unified Navigation**: Single Navigation Drawer for all roles.
+- [x] **Ledger UX**: Expandable filters and optimized screen space.
+
+---
+
 ## 25. Changelog
 
 ### v1.6 — Navigation Consolidation & Seeding (June 2026)
