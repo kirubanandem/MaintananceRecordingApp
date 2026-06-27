@@ -1,7 +1,9 @@
 # 📦 Kirubas MSR — Maintenance Accessories Stock Record
 ### Android Application — Complete Project Reference
 
-> **Version:** 1.5 &nbsp;|&nbsp; **Last updated:** June 2026  
+**Deep Link / Web Download:** [https://msr-android.web.app/](https://msr-android.web.app/)
+
+> **Version:** 1.6 &nbsp;|&nbsp; **Last updated:** June 2026  
 > **Android Studio:** Quail 2026.1.1 Patch 2 &nbsp;|&nbsp; **AGP:** 9.2.0 &nbsp;|&nbsp; **Gradle:** 9.4.1
 
 ---
@@ -53,12 +55,13 @@ Company → Store → Wardrobe → Rack → Box → Particular (item)
 Each day, stock is updated via Inward and Outward transactions. Closing stock auto-becomes the next day's opening balance. Admins are alerted when stock falls below a configurable minimum level.
 
 ### Key design decisions
+- **Unified Navigation:** Single Drawer Menu + Bottom Navigation host all user roles and admin features.
 - **Multi-tenant Hierarchy:** Physically nested Store-level isolation for Wardrobes, Racks, and Boxes under each Company.
 - **Admin Correction Rights:** SuperAdmins and Admins can correct **Opening Balance** and **Minimum Qty** for existing items with auto-stock adjustment.
+- **Intelligent CSV Import:** Store-aware bulk import with automatic hierarchy creation (Store -> Wardrobe -> Rack -> Box).
 - **Hardened Security:** Server-side enforcement of user activation and privilege levels via strict Firestore Rules.
 - **Smart Stock Reversion:** Deleting a ledger entry automatically reverses the stock change and re-evaluates low-stock alerts.
-- **Offline-first:** Firestore offline persistence enabled by default; transactions written offline sync when back online.
-- **Secondary FirebaseApp technique:** used for in-app user creation without signing out the current admin session.
+- **Offline-first:** Firestore offline persistence enabled by default.
 
 ---
 
@@ -232,6 +235,13 @@ service cloud.firestore {
 ---
 
 ## 25. Changelog
+
+### v1.6 — Navigation Consolidation & Seeding (June 2026)
+- **Unified Menu System**: Combined Options Menu and Admin Drawer into a single, role-aware Navigation Drawer in `MainActivity`.
+- **Improved CSV Import**: Updated sample template and parser to include **Store** column, enabling multi-store bulk seeding.
+- **Searchable Admin UI**: Added real-time search filters to Particulars and Box lists to handle large inventories.
+- **Ledger UX**: Implemented expand/collapse filter section in Ledger view to maximize screen space for reports.
+- **Layout Optimization**: Standardized `fragment_store_aware_list.xml` with integrated search functionality.
 
 ### v1.5 — Stock Integrity & UX (June 2026)
 - Implemented **Automatic Stock Reversion** upon transaction deletion.
