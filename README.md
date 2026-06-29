@@ -142,11 +142,17 @@ service cloud.firestore {
     function isSignedIn() { return request.auth != null; }
     function userDoc() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
     function isSuperAdmin() { return isSignedIn() && userDoc().get('role', 'viewer') == 'superadmin'; }
-    function isUserActive() { return isSignedIn() && userDoc().get('active', true) == true; }
+    function isUserActive() {
+      let user = userDoc();
+      return isSignedIn() && (user.get('active', true) == true || user.get('isActive', true) == true);
+    }
     function userCompanyId() { return userDoc().get('companyId', ''); }
     function userStoreId() { return userDoc().get('storeId', ''); }
     function isAdminOrAbove() { let role = userDoc().get('role', 'viewer'); return role == 'superadmin' || role == 'admin' || role == 'manager'; }
-    function isCompanyActive(cid) { let company = get(/databases/$(database)/documents/companies/$(cid)).data; return company.get('isActive', true) == true; }
+    function isCompanyActive(cid) {
+      let company = get(/databases/$(database)/documents/companies/$(cid)).data;
+      return company.get('active', true) == true || company.get('isActive', true) == true;
+    }
 
     function canAccessResource(resourceData) {
        return isSignedIn() && (isSuperAdmin() || (userCompanyId() == resourceData.get('companyId', '') && (isAdminOrAbove() || userStoreId() == '' || resourceData.get('storeId', '') == '' || resourceData.get('storeId', '') == userStoreId())));
