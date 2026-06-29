@@ -3,7 +3,7 @@
 
 **Deep Link / Web Download:** [https://msr-android.web.app/](https://msr-android.web.app/)
 
-> **Version:** 1.7 &nbsp;|&nbsp; **Last updated:** July 2026  
+> **Version:** 6.0 &nbsp;|&nbsp; **Last updated:** June 2026
 > **Android Studio:** Quail 2026.1.1 Patch 2 &nbsp;|&nbsp; **AGP:** 9.2.0 &nbsp;|&nbsp; **Gradle:** 9.4.1
 
 ---
@@ -55,11 +55,12 @@ Company → Store → Wardrobe → Rack → Box → Particular (item)
 Each day, stock is updated via Inward and Outward transactions. Closing stock auto-becomes the next day's opening balance. Admins are alerted when stock falls below a configurable minimum level.
 
 ### Key design decisions
-- **Unified Navigation:** Single Drawer Menu + Bottom Navigation host all user roles and admin features.
-- **Multi-tenant Hierarchy:** Physically nested Store-level isolation for Wardrobes, Racks, and Boxes under each Company.
-- **Admin Correction Rights:** SuperAdmins and Admins can correct **Opening Balance** and **Minimum Qty** for existing items with auto-stock adjustment.
-- **Intelligent CSV Import:** Store-aware bulk import with automatic hierarchy creation (Store -> Wardrobe -> Rack -> Box).
-- **Hardened Security:** Server-side enforcement of user activation and privilege levels via strict Firestore Rules.
+- **Recalculate Stocks tool:** Admin-only feature to audit full transaction history and repair any stock discrepancies automatically.
+- **Atomic Stock Increments:** Utilizes Firestore `FieldValue.increment()` to ensure multi-user stock updates never conflict or overwrite each other.
+- **Natural Box Sorting:** Sorting logic (B1, B2, B10) implemented across Dashboard, Transactions, and Reports for intuitive navigation.
+- **Unified Navigation:** Single Drawer Menu + Bottom Navigation host all user roles and admin features with smart backstack handling.
+- **Outward Validation:** Real-time checking to prevent transactions from exceeding available stock, maintaining data integrity.
+- **Local-Only Credentials:** Sensitive signing keys moved to `local.properties` to ensure high security in the source repository.
 - **Smart Stock Reversion:** Deleting a ledger entry automatically reverses the stock change and re-evaluates low-stock alerts.
 - **Offline-first:** Firestore offline persistence enabled by default.
 
@@ -262,7 +263,16 @@ service cloud.firestore {
 
 ## 25. Changelog
 
-### v1.7 — UX Refinement & Reliability (July 2026)
+### v6.0 — Stock Integrity & Security (June 2026)
+- **Recalculate Stocks Tool**: Added an Admin-only audit feature to cross-verify full transaction history and repair stock discrepancies automatically.
+- **Atomic Increments**: Migrated stock and ledger updates to Firestore `increment()` for thread-safe, multi-user concurrency.
+- **Instant Save UX**: Implemented high-performance Write Batches; transactions now save instantly to local cache and sync to cloud in the background.
+- **Outward Validation**: Integrated real-time stock checks to prevent negative inventory balances.
+- **Natural Box Sorting**: Standardized "Natural" numeric sorting (B1, B2, B10) across all item pickers, dashboard, and reports.
+- **Security Hardening**: Moved signing credentials and sensitive API keys to `local.properties` (ignored by Git).
+- **Navigation Restoration**: Fixed Hamburger menu icon persistent visibility on main tabs by clearing fragment backstack on tab switch.
+
+### v1.7 — UX Refinement & Reliability (June 2026)
 - **Smart Navigation**: Back button now tracks user activity through fragment backstack, returning to Dashboard before exit prompt.
 - **User Management Fixes**: Fixed total user count display and improved "Add User" dialog with pre-loading states.
 - **Enhanced Error Handling**: Long error messages (like missing Firestore indexes) now show in clickable dialogs instead of being truncated in Toasts.
