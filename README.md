@@ -3,7 +3,7 @@
 
 **Deep Link / Web Download:** [https://msr-android.web.app/](https://msr-android.web.app/)
 
-> **Version:** 1.6 &nbsp;|&nbsp; **Last updated:** June 2026  
+> **Version:** 1.7 &nbsp;|&nbsp; **Last updated:** July 2026  
 > **Android Studio:** Quail 2026.1.1 Patch 2 &nbsp;|&nbsp; **AGP:** 9.2.0 &nbsp;|&nbsp; **Gradle:** 9.4.1
 
 ---
@@ -226,6 +226,7 @@ service cloud.firestore {
 | `particulars` | `companyId ASC`, `storeId ASC`, `active ASC`, `name ASC` | Dashboard |
 | `particulars` | `companyId ASC`, `currentStock ASC` | Dashboard Summary |
 | `transactions` | `companyId ASC`, `transactionDate DESC`, `createdAt DESC` | Audit Log |
+| `transactions` | `storeId ASC`, `createdAt DESC` | Audit Log (Store Filter) |
 | `transactions` | `companyId ASC`, `storeId ASC`, `transactionDate DESC` | Ledger |
 | `alerts` | `companyId ASC`, `storeId ASC`, `isResolved ASC`, `triggeredAt DESC` | Alerts |
 | `wardrobes` | `companyId ASC`, `storeId ASC`, `order ASC` | Wardrobe List |
@@ -247,10 +248,20 @@ service cloud.firestore {
 - [x] **CSV Importer**: Robust regex-based 8-column store-aware import with caching.
 - [x] **Unified Navigation**: Single Navigation Drawer for all roles.
 - [x] **Ledger UX**: Expandable filters and optimized screen space.
+- [x] **Smart Navigation**: Activity tracking via fragment backstack.
+- [x] **Reliability**: Improved error dialogs with clickable links for Firestore indexing.
 
 ---
 
 ## 25. Changelog
+
+### v1.7 — UX Refinement & Reliability (July 2026)
+- **Smart Navigation**: Back button now tracks user activity through fragment backstack, returning to Dashboard before exit prompt.
+- **User Management Fixes**: Fixed total user count display and improved "Add User" dialog with pre-loading states.
+- **Enhanced Error Handling**: Long error messages (like missing Firestore indexes) now show in clickable dialogs instead of being truncated in Toasts.
+- **Improved Icons**: Updated drawer menu icons for Logout, Help, and Setup items for better visual clarity.
+- **Transaction UX**: Set **INWARD** as the default transaction type for faster data entry.
+- **Navigation Shortcuts**: "Store Setup" menu item now navigates directly to the Store tab in the Setup fragment.
 
 ### v1.6 — Navigation Consolidation & Seeding (June 2026)
 - **Unified Menu System**: Combined Options Menu and Admin Drawer into a single, role-aware Navigation Drawer in `MainActivity`.
