@@ -215,7 +215,8 @@ service cloud.firestore {
 | Feature | SuperAdmin | Admin | Manager | Viewer |
 |---|:---:|:---:|:---:|:---:|
 | Edit Opening Stock / Min Qty | ✅ | ✅ | ❌ | ❌ |
-| Create User Accounts / Stores | ✅ | ❌ | ❌ | ❌ |
+| Create User Accounts | ✅ | ✅ | ❌ | ❌ |
+| Manage Stores | ✅ | ✅ | ❌ | ❌ |
 | Switch Store Context | ✅ | ✅ | ❌ | ❌ |
 | Manage Wardrobes / Racks / Boxes | ✅ | ✅ | ❌ | ❌ |
 | Perform Transactions | ✅ | ✅ | ✅ | ❌ |
