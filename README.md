@@ -3,7 +3,7 @@
 
 **Deep Link / Web Download:** [https://msr-android.web.app/](https://msr-android.web.app/)
 
-> **Version:** 9.0 &nbsp;|&nbsp; **Last updated:** 03 July 2026 21:00
+> **Version:** 10.0 &nbsp;|&nbsp; **Last updated:** 13 July 2026 12:00
 > **Android Studio:** Ladybug &nbsp;|&nbsp; **AGP:** 9.2.0 &nbsp;|&nbsp; **Gradle:** 9.4.1
 
 ---
@@ -112,7 +112,9 @@ A daily accessories stock monitoring system for physical inventory organized in 
 ## 7. Firestore Data Structure (v2.0)
 
 - `/users/{uid}`: Profiles with role-based access.
+- `/registrationRequests/{id}`: Public status tracking for company registrations.
 - `/companies/{cid}`: Organizational roots.
+- `/companies/{cid}/reorderRequests/{id}`: Token-secured supplier orders with PO numbers.
 - `/stores/{sid}/particulars/{pid}`: Core item data.
 - `/stockLedger/{date}/entries/{pid}`: Aggregated daily snapshot data.
 
@@ -181,6 +183,16 @@ service cloud.firestore {
 - **Logical Grouping**: Maintain items within a strict `Store → Wardrobe → Rack → Box` structure.
 - **Occupancy Tracking**: Prevents assigning multiple items to the same physical Box.
 
+### 🔢 PO-Based Reordering (v10.0)
+- **Unique PO Numbers**: Automatically generates numeric `PO#123456` for all supplier requests.
+- **Attribution Tracking**: Records "Requested by" and "Updated by" user names for full accountability.
+- **Secure Portal**: Suppliers update status via a tokenized web link; no MSR account required.
+- **Action Notifications**: Formal WhatsApp/Email templates for new, resent, cancelled, and deleted requests.
+
+### 📋 Registration Tracking
+- **Public Reference**: Uses `REG-XXXXXX` codes for public status checks without login.
+- **Direct Interaction**: One-click WhatsApp/Call actions for admins to contact applicants.
+
 ---
 
 ## 12. Stock Movement Logic
@@ -227,11 +239,13 @@ Users can now choose their preferred export format:
 
 ---
 
-## 17. Firebase Hosting — Download Page
+## 17. Firebase Hosting — Web Portal & Status Checks
 
-The project uses Firebase Hosting to serve a landing page for APK downloads:
+The project uses Firebase Hosting to serve a landing page and interactive portals:
+- **Supplier Portal**: Securely view and update reorder status via token-based deep links.
+- **Registration Check**: Publicly check the status of company requests using reference numbers.
+- **App Download**: Staff landing page for the latest APK version.
 - **URL**: [https://msr-android.web.app/](https://msr-android.web.app/)
-- **QR Code**: Shared with staff for easy onboarding.
 
 ---
 
@@ -277,7 +291,7 @@ implementation 'com.github.bumptech.glide:glide:4.16.0'
 
 - **Multi-Language Support**: RTL and local language translations.
 - **Deep Analytics**: Long-term stock usage forecasting using linear regression.
-- **Supplier Portal**: Restricted login for suppliers to view their own supply history.
+- **Supplier Portal v2**: Completed token-based tracking; future updates include multi-item batch orders.
 
 ---
 
@@ -302,7 +316,18 @@ Composite Indexes for `entries` (Collection Group):
 
 ## 25. Changelog
 
-### v9.0 — Security & Stability Overhaul (July 2026)
+### v10.0 — PO Tracking & Secure Attribution (July 2026)
+- **PO Numbering**: Implemented unique numeric `PO#123456` system for all reorder requests.
+- **Full Attribution**: Added tracking for "Requested by" and "Updated by" (User or Supplier) across all platforms.
+- **Enhanced Notifications**: Formal messaging templates for New, Resent, Cancelled, and Deleted actions, including PO numbers and user names.
+- **Web Portal Fixes**: Resolved permission errors for suppliers by embedding customer metadata in request documents.
+- **Registration Ref-System**: Integrated public `REG-XXXXXX` status checks on the web portal.
+- **Operational UX**: Forced browser-only link opening for mobile suppliers and restricted past-date selections for reorders.
+
+### v9.0 — Reorder & Supplier Portal (July 2026)
+- **Supplier Portal**: Launched web-based portal for suppliers to acknowledge and update reorder requests via secure tokens.
+- **Reorder Workflow**: Integrated WhatsApp/Email messaging with auto-generated portal links.
+- **Auto-Inward**: Added ability to pre-fill Inward Transactions directly from completed reorder requests.
 - **Android 14 Compatibility**: Migrated all broadcast receivers to `ContextCompat` with `RECEIVER_NOT_EXPORTED` flags for enhanced security.
 - **User Management Safety**: Prevented self-role demotion and defaulted new user creation to the "Viewer" role.
 - **Administrative Isolation**: Restricted regular Admins from viewing or editing SuperAdmin accounts.
