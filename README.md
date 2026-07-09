@@ -3,7 +3,7 @@
 
 **Deep Link / Web Download:** [https://msr-android.web.app/](https://msr-android.web.app/)
 
-> **Version:** 10.0 &nbsp;|&nbsp; **Last updated:** 13 July 2026 12:00
+> **Version:** 11.1 &nbsp;|&nbsp; **Last updated:** 10 July 2026 10:00
 > **Android Studio:** Ladybug &nbsp;|&nbsp; **AGP:** 9.2.0 &nbsp;|&nbsp; **Gradle:** 9.4.1
 
 ---
@@ -114,7 +114,9 @@ A daily accessories stock monitoring system for physical inventory organized in 
 - `/users/{uid}`: Profiles with role-based access.
 - `/registrationRequests/{id}`: Public status tracking for company registrations.
 - `/companies/{cid}`: Organizational roots.
-- `/companies/{cid}/reorderRequests/{id}`: Token-secured supplier orders with PO numbers.
+- `/companies/{cid}/reorderRequests/{id}`: Token-secured supplier orders with sequential PO numbers.
+- `/support_chats/{uid}/messages/{mid}`: Customer support chat history.
+- `/broadcasts/{id}`: Global announcements and critical alerts.
 - `/stores/{sid}/particulars/{pid}`: Core item data.
 - `/stockLedger/{date}/entries/{pid}`: Aggregated daily snapshot data.
 
@@ -183,14 +185,20 @@ service cloud.firestore {
 - **Logical Grouping**: Maintain items within a strict `Store → Wardrobe → Rack → Box` structure.
 - **Occupancy Tracking**: Prevents assigning multiple items to the same physical Box.
 
-### 🔢 PO-Based Reordering (v10.0)
-- **Unique PO Numbers**: Automatically generates numeric `PO#123456` for all supplier requests.
+### 🔢 Sequential PO Reordering (v11.0)
+- **Sequential PO Numbers**: Automatically generates numeric `PO-00001` in sequence using Firestore transactions to prevent duplicates.
 - **Attribution Tracking**: Records "Requested by" and "Updated by" user names for full accountability.
 - **Secure Portal**: Suppliers update status via a tokenized web link; no MSR account required.
 - **Action Notifications**: Formal WhatsApp/Email templates for new, resent, cancelled, and deleted requests.
 
+### 💬 Support Chat 2.0
+- **Bubble UI**: Modern chat interface with distinct bubbles for sent and received messages.
+- **Relative Timestamps**: Smart time formatting (e.g., "just now", "3 mins ago", "today 11:25 PM") for better context.
+- **Admin Queue**: Centralized support queue for Super Admins to manage multiple customer queries.
+
 ### 📋 Registration Tracking
-- **Public Reference**: Uses `REG-XXXXXX` codes for public status checks without login.
+- **Secure Status Check**: Requires both Admin Email and `REG-XXXXXX` reference code for status inquiries.
+- **SuperAdmin Management**: Ability to delete stale or rejected registration requests.
 - **Direct Interaction**: One-click WhatsApp/Call actions for admins to contact applicants.
 
 ---
@@ -232,10 +240,11 @@ Users can now choose their preferred export format:
 
 ---
 
-## 16. App Update System
+## 16. App Update System (Mandatory)
 
-- **Hosting**: App periodically checks `update.json` hosted on GitHub.
-- **In-App Download**: If a new version is detected, users are prompted to download and install the APK directly within the app using `DownloadManager`.
+- **Hosting**: App periodically checks `update.json` hosted on the MSR Web Portal.
+- **Mandatory Enforcement**: If a new version is detected, the app blocks further access (Splash and Login) until the update is installed.
+- **In-App Download**: Users are guided to download the latest APK directly using a dedicated download activity.
 
 ---
 
@@ -243,7 +252,7 @@ Users can now choose their preferred export format:
 
 The project uses Firebase Hosting to serve a landing page and interactive portals:
 - **Supplier Portal**: Securely view and update reorder status via token-based deep links.
-- **Registration Check**: Publicly check the status of company requests using reference numbers.
+- **Registration Check**: Securely check request status using email + reference number.
 - **App Download**: Staff landing page for the latest APK version.
 - **URL**: [https://msr-android.web.app/](https://msr-android.web.app/)
 
@@ -297,7 +306,6 @@ implementation 'com.github.bumptech.glide:glide:4.16.0'
 
 ## 23. Known TODOs in Generated Code
 
-- **Backup**: Implement secondary database backup (Firebase to CSV export scheduled).
 - **Image Upload**: Particular item image support in Firestore Storage.
 - **Unit Conversion**: Better handling for fractional quantities (kgs, grams).
 
@@ -316,7 +324,20 @@ Composite Indexes for `entries` (Collection Group):
 
 ## 25. Changelog
 
-### v10.0 — PO Tracking & Secure Attribution (July 2026)
+### v10.0 — PO Tracking & Secure Attribution & Atomic Integrity & Index Optimization & Sequential PO & Enhanced Support (July 2026)
+- **Atomic Stock Deletions:** Migrated all transaction deletions to `db.runTransaction` blocks to ensure `Particular` stock, `StockLedger` entries, and the `Transaction` document are updated atomically.
+- **Enhanced Recalculation:** The "Recalculate Stocks" feature now includes a secondary validation pass to enforce the `Closing = Opening + Inward - Outward` logic on every daily ledger record.
+- **Reporting Stability:** Optimized `entries` collection group queries with explicit `orderBy` clauses and matching composite indexes to eliminate "missing index" errors during report generation.
+- **Data Drift Prevention:** Real-time stock updates now use Firestore increments within transactions rather than sequential local updates.
+- **Sequential PO Numbers**: Replaced random PO numbers with a transaction-safe sequential `PO-XXXXX` system.
+- **Support Chat 2.0**: Implemented a Bubble UI with relative timestamps and a centralized Admin Queue.
+- **Mandatory Updates**: Enforced strict version control; users must update to the latest version to log in.
+- **Full Company Backup**: Added a comprehensive "Full Data Backup" to Excel, including Ledger and Transactions.
+- **Performance Optimization**: Integrated SXSSFWorkbook for large-scale Excel backups to prevent memory issues and parallelized Firestore data fetching.
+- **Enhanced Registration Security**: Status checks now require both Admin Email and Reference Number.
+- **SuperAdmin UI**: Added company-wise filtering for user management and delete options for registrations.
+- **Model Mapping Fixes**: Fixed Firestore `CustomClassMapper` warnings by standardizing boolean fields (`isActive`).
+- **Progress UI**: Replaced deprecated ProgressDialog with a custom themed ProgressBar.
 - **PO Numbering**: Implemented unique numeric `PO#123456` system for all reorder requests.
 - **Full Attribution**: Added tracking for "Requested by" and "Updated by" (User or Supplier) across all platforms.
 - **Enhanced Notifications**: Formal messaging templates for New, Resent, Cancelled, and Deleted actions, including PO numbers and user names.
