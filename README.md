@@ -3,7 +3,7 @@
 
 **Deep Link / Web Download:** [https://msr-android.web.app/](https://msr-android.web.app/)
 
-> **Version:** 11.1 &nbsp;|&nbsp; **Last updated:** 10 July 2026 10:00
+> **Version:** 10.0 &nbsp;|&nbsp; **Last updated:** 10 July 2026 10:00
 > **Android Studio:** Ladybug &nbsp;|&nbsp; **AGP:** 9.2.0 &nbsp;|&nbsp; **Gradle:** 9.4.1
 
 ---
