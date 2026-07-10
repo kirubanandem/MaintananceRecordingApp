@@ -3,7 +3,7 @@
 
 **Deep Link / Web Download:** [https://msr-android.web.app/](https://msr-android.web.app/)
 
-> **Version:** 10.0 &nbsp;|&nbsp; **Last updated:** 10 July 2026 10:00
+> **Version:** 11.0 &nbsp;|&nbsp; **Last updated:** 10 July 2026 12:00
 > **Android Studio:** Ladybug &nbsp;|&nbsp; **AGP:** 9.2.0 &nbsp;|&nbsp; **Gradle:** 9.4.1
 
 ---
@@ -323,6 +323,11 @@ Composite Indexes for `entries` (Collection Group):
 ---
 
 ## 25. Changelog
+
+### v11.0 — UI UX & Edge-to-Edge Optimization (July 2026)
+- **Bottom Navigation Placement:** Fixed the positioning of the `BottomNavigationView` to sit perfectly above the system navigation panel (3-button and gesture nav).
+- **Edge-to-Edge UI:** Enhanced the app's visual depth by allowing the navigation bar background to extend behind system buttons while keeping interactive icons accessible.
+- **Window Insets Refinement:** Optimized the `OnApplyWindowInsetsListener` to correctly handle system bars and keyboard (IME) transitions.
 
 ### v10.0 — PO Tracking & Secure Attribution & Atomic Integrity & Index Optimization & Sequential PO & Enhanced Support (July 2026)
 - **Atomic Stock Deletions:** Migrated all transaction deletions to `db.runTransaction` blocks to ensure `Particular` stock, `StockLedger` entries, and the `Transaction` document are updated atomically.
