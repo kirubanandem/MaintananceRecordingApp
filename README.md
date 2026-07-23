@@ -3,7 +3,7 @@
 
 **Deep Link / Web Download:** [https://msr-android.web.app/](https://msr-android.web.app/)
 
-> **Version:** 11.0 &nbsp;|&nbsp; **Last updated:** 10 July 2026 12:00
+> **Version:** 12.0 &nbsp;|&nbsp; **Last updated:** 23 July 2026 14:00
 > **Android Studio:** Ladybug &nbsp;|&nbsp; **AGP:** 9.2.0 &nbsp;|&nbsp; **Gradle:** 9.4.1
 
 ---
@@ -68,6 +68,7 @@ A daily accessories stock monitoring system for physical inventory organized in 
 | PDF Export | iText 7 Community | 7.2.5 |
 | Excel Export | Apache POI | 5.2.5 |
 | Charts | MPAndroidChart | v3.1.0 |
+| Local Cache | SQLite / Room | 2.6.1 |
 
 ---
 
@@ -76,7 +77,8 @@ A daily accessories stock monitoring system for physical inventory organized in 
 ### Core Source (`app/src/main/java/com/kirubas/msr/`)
 - **`ui/`**: Fragments (Dashboard, Ledger, Alerts) and Activities (Report, Profile).
 - **`data/`**: Models (`Particular`, `Transaction`, `StockLedger`, `Box`) and `SecurePrefsManager`.
-- **`util/`**: `ExcelBuilder`, `PdfBuilder`, `DateUtils`, `SyncManager`.
+- **`data/local/room/`**: Room Persistence Layer (`MSRDatabase`, `ParticularDao`, `ParticularEntity`).
+- **`util/`**: `ExcelBuilder`, `PdfBuilder`, `DateUtils`, `SyncManager`, `BackupUtils`.
 
 ---
 
@@ -104,6 +106,7 @@ A daily accessories stock monitoring system for physical inventory organized in 
 
 - **Pattern**: Clean Architecture principles using Activity/Fragment hierarchy.
 - **Data Flow**: Fragments use `FirebaseFirestore` directly with SnapshotListeners for real-time UI updates.
+- **Local Persistence**: **Room Database** acts as a caching layer for particulars to ensure instant UI loading and offline availability.
 - **State Management**: `SecurePrefsManager` (EncryptedSharedPreferences) stores session tokens, role info, and user preferences locally.
 - **Navigation**: Uses a combination of `BottomNavigationView` for core pages and `NavigationView` (Drawer) for administrative tasks.
 
@@ -116,9 +119,10 @@ A daily accessories stock monitoring system for physical inventory organized in 
 - `/companies/{cid}`: Organizational roots.
 - `/companies/{cid}/reorderRequests/{id}`: Token-secured supplier orders with sequential PO numbers.
 - `/support_chats/{uid}/messages/{mid}`: Customer support chat history.
-- `/broadcasts/{id}`: Global announcements and critical alerts.
+- `/broadcasts/{id}`: Global and targeted announcements (by role/status).
 - `/stores/{sid}/particulars/{pid}`: Core item data.
 - `/stockLedger/{date}/entries/{pid}`: Aggregated daily snapshot data.
+- `/config/maintenance`: System-wide maintenance mode kill-switch.
 
 ---
 
@@ -150,7 +154,7 @@ service cloud.firestore {
 
 ## 9. User Roles & Permissions
 
-- **SuperAdmin**: Global access across all companies. Can manage any user or company.
+- **SuperAdmin**: Global access across all companies. Can manage any user or company. Can initiate support chats and toggle maintenance mode.
 - **Admin**: Full control within their own company. Can create users (defaults to **Viewer** for safety). Restricted from managing SuperAdmins.
 - **Manager**: Operational access restricted to their assigned **Store**. Can manage inventory and view reports for that store only.
 - **Viewer**: Read-only access to dashboards and reports. Blocked from all transaction and setup actions.
@@ -159,9 +163,10 @@ service cloud.firestore {
 
 ## 10. Screen & Navigation Map
 
-- **Splash**: Check for updates and verify session.
+- **Splash**: Check for updates, maintenance mode, and verify session.
 - **Login**: Auth via Email or Biometrics.
-- **Dashboard**: High-level counts + Movement Trend Chart + Top Movers.
+- **Dashboard**: High-level counts + Movement Trend Chart + Top Movers + Real-time support/registration alerts.
+- **System Insights**: SuperAdmin only stats dashboard (Active companies, total users, trial health).
 - **Transaction**: Dedicated screen for Inward/Outward stock entry.
 - **Ledger**: Historical transaction log with multi-format export.
 - **Pivot Report**: Complex cross-tabular reporting for date ranges.
@@ -183,23 +188,20 @@ service cloud.firestore {
 
 ### 📦 Hierarchy Management
 - **Logical Grouping**: Maintain items within a strict `Store → Wardrobe → Rack → Box` structure.
-- **Occupancy Tracking**: Prevents assigning multiple items to the same physical Box.
+- **Safety Blocks**: Particulars tab now blocks item creation until a specific store is selected, and enforces mandatory box linkage.
 
-### 🔢 Sequential PO Reordering (v11.0)
-- **Sequential PO Numbers**: Automatically generates numeric `PO-00001` in sequence using Firestore transactions to prevent duplicates.
-- **Attribution Tracking**: Records "Requested by" and "Updated by" user names for full accountability.
-- **Secure Portal**: Suppliers update status via a tokenized web link; no MSR account required.
-- **Action Notifications**: Formal WhatsApp/Email templates for new, resent, cancelled, and deleted requests.
+### 🔢 Sequential PO Reordering
+- **Sequential PO Numbers**: Automatically generates numeric `PO-00001` in sequence using Firestore transactions.
+- **Attribution Tracking**: Records "Requested by" and "Updated by" user names.
 
-### 💬 Support Chat 2.0
-- **Bubble UI**: Modern chat interface with distinct bubbles for sent and received messages.
-- **Relative Timestamps**: Smart time formatting (e.g., "just now", "3 mins ago", "today 11:25 PM") for better context.
-- **Admin Queue**: Centralized support queue for Super Admins to manage multiple customer queries.
+### 💬 Support Chat 3.0 (v12.0)
+- **Bidirectional Alerts**: Distinct unread counts for Admin vs User (`unreadCountForAdmin`, `unreadCountForUser`).
+- **Dashboard Alerts**: Immediate visibility for new messages on the home dashboard.
+- **Admin-Initiated**: Super Admins can now start chats with any user directly from User Management.
 
-### 📋 Registration Tracking
-- **Secure Status Check**: Requires both Admin Email and `REG-XXXXXX` reference code for status inquiries.
-- **SuperAdmin Management**: Ability to delete stale or rejected registration requests.
-- **Direct Interaction**: One-click WhatsApp/Call actions for admins to contact applicants.
+### 📋 Company Management (Super Admin)
+- **Centralized Activation**: Activate or Deactivate companies directly from the global "All Companies" list.
+- **System Insights**: Real-time health check showing active/total companies, expiring trials (7-day window), and global item counts.
 
 ---
 
@@ -209,7 +211,7 @@ service cloud.firestore {
 - **Transactions**: 
   - `Inward`: `Current Stock + Quantity`
   - `Outward`: `Current Stock - Quantity` (Blocked if insufficient stock)
-- **Aggregation**: `StockLedger` entries are updated in the same write-batch as transactions to ensure data consistency.
+- **Aggregation**: `StockLedger` entries are updated in the same write-batch as transactions.
 - **Recalculation**: Background task sums all historical transactions starting from the Opening Balance to correct potential drift.
 
 ---
@@ -217,68 +219,65 @@ service cloud.firestore {
 ## 13. PDF & Excel Export System
 
 Users can now choose their preferred export format:
-- **PDF**: Generates a clean, static report suitable for printing or record-keeping.
-- **Excel (.xlsx)**: Generates a spreadsheet using Apache POI, allowing further calculations and sorting in external tools.
-- **Universal Share**: Uses the system app chooser to send files via WhatsApp, Gmail, Telegram, etc.
+- **PDF**: Generates a clean, static report suitable for printing.
+- **Excel (.xlsx)**: Generates a spreadsheet using Apache POI.
+- **Backup Options (v12.0)**: Selective export allows picking specific categories (Users, Parties, etc.) and date ranges for transactions/ledger to optimize data usage.
 
 ---
 
 ## 14. Dashboard Analytics (Charts)
 
-- **Line Chart Integration**: Uses `MPAndroidChart` with a unified scale for Inward, Outward, and Balance trends.
-- **Performance Insights**: Dedicated cards showing "Top Inward Movers" and "Top Outward Movers" for the last 7 days.
-- **Drill-down**: Tap on any chart or insight to view full-screen detailed analytics.
-- **Data Integrity**: Automatic background stock recalculation triggers every 24 hours to ensure local current stock matches transaction history.
+- **Line Chart Integration**: Uses `MPAndroidChart` showing trends for the last 7 days.
+- **Targeted Insights**: Charts automatically adjust based on the current list filters (Total/Low/Healthy).
+- **Movers**: Real-time summary of top 5 items by inward/outward volume.
 
 ---
 
 ## 15. Alert System
 
-- **Trigger**: Automatic notification generated when `currentStock <= minStockQty`.
-- **Visibility**: Persistent badge count on the Bottom Navigation bar.
-- **Resolution**: Alerts are automatically marked as "Resolved" when stock is replenished via an Inward transaction.
+- **Trigger**: Automatic notification when `currentStock <= minStockQty`.
+- **Expiry Alerts (v12.0)**: Automatic 7-day warning popups for trial/grace period expirations (limited to once every 24 hours per user).
+- **Admin Alerts**: Dashboard notifications for unread support chats and pending registrations.
 
 ---
 
 ## 16. App Update System (Mandatory)
 
 - **Hosting**: App periodically checks `update.json` hosted on the MSR Web Portal.
-- **Mandatory Enforcement**: If a new version is detected, the app blocks further access (Splash and Login) until the update is installed.
-- **In-App Download**: Users are guided to download the latest APK directly using a dedicated download activity.
+- **Mandatory Enforcement**: Detects versions and blocks access until updated.
 
 ---
 
 ## 17. Firebase Hosting — Web Portal & Status Checks
 
 The project uses Firebase Hosting to serve a landing page and interactive portals:
-- **Supplier Portal**: Securely view and update reorder status via token-based deep links.
-- **Registration Check**: Securely check request status using email + reference number.
+- **Supplier Portal**: Securely update reorder status via token-based deep links.
+- **Registration Check**: Securely check request status.
 - **App Download**: Staff landing page for the latest APK version.
 - **URL**: [https://msr-android.web.app/](https://msr-android.web.app/)
 
 ---
 
-## 18. Offline Support
+## 18. Offline Support (Enhanced v12.0)
 
-- **Persistence**: Firestore disk persistence enabled by default.
-- **Sync Status**: Dashboard and Ledger items show a "Pending Sync" icon when transactions are made while offline.
-- **Conflict Resolution**: Last-write-wins strategy for multi-user edits on identical records.
+- **Room Persistence**: The Particulars list is now cached in a local SQLite database using Room.
+- **Instant Load**: Screen displays cached data immediately while syncing Firestore updates in the background.
+- **Resilience**: Full inventory viewing is available without any internet connection.
 
 ---
 
 ## 19. Login — Biometric & Remember Me
 
 - **Session Persistence**: "Remember Me" keeps users logged in using `SecurePrefsManager`.
-- **Biometrics**: Integration with Android BiometricPrompt for fingerprint/face unlock.
-- **Password Security**: Uses `EncryptedSharedPreferences` for storing sensitive tokens on-device.
+- **Biometrics**: Integration with Android BiometricPrompt.
 
 ---
 
 ## 20. Device Compatibility & 16KB Support
 
-- **Min SDK**: API 26 (Android 8.0) for modern Java features.
-- **Target SDK**: API 36 (Android 16 preview support).
-- **16KB Page Alignment**: Built with AGP 9.2.0 for compatibility with modern ARM kernel page sizes.
+- **Min SDK**: API 26 (Android 8.0).
+- **Target SDK**: API 36.
+- **16KB Page Alignment**: Built with AGP 9.2.0 for modern ARM kernel compatibility.
 
 ---
 
@@ -288,25 +287,25 @@ The project uses Firebase Hosting to serve a landing page and interactive portal
 implementation 'androidx.appcompat:appcompat:1.7.0'
 implementation 'com.google.android.material:material:1.12.0'
 implementation 'com.google.firebase:firebase-bom:33.1.0'
+implementation 'androidx.room:room-runtime:2.6.1'
 implementation 'com.itextpdf:itext7-core:7.2.5'
 implementation 'org.apache.poi:poi:5.2.5'
 implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
-implementation 'com.github.bumptech.glide:glide:4.16.0'
 ```
 
 ---
 
 ## 22. What Still Needs Implementation
 
+- **Barcode Scanning**: Integrated QR/Barcode support for quick item lookup.
 - **Multi-Language Support**: RTL and local language translations.
-- **Deep Analytics**: Long-term stock usage forecasting using linear regression.
-- **Supplier Portal v2**: Completed token-based tracking; future updates include multi-item batch orders.
+- **Transaction Attachments**: Supporting photo uploads for physical DC records.
 
 ---
 
 ## 23. Known TODOs in Generated Code
 
-- **Image Upload**: Particular item image support in Firestore Storage.
+- **Image Storage**: Scaling storage for particular item thumbnails.
 - **Unit Conversion**: Better handling for fractional quantities (kgs, grams).
 
 ---
@@ -320,53 +319,38 @@ Composite Indexes for `entries` (Collection Group):
 - `companyId ASC, particularId ASC, storeId ASC, dateKey ASC, __name__ ASC`
 - `companyId ASC, boxId ASC, dateKey ASC, __name__ ASC`
 
+New Indexes (v12.0):
+- `parties: companyId ASC` (Collection Group)
+- `stores: companyId ASC` (Collection Group)
+
 ---
 
 ## 25. Changelog
 
-### v11.0 — UI UX & Edge-to-Edge Optimization (July 2026)
-- **Bottom Navigation Placement:** Fixed the positioning of the `BottomNavigationView` to sit perfectly above the system navigation panel (3-button and gesture nav).
-- **Edge-to-Edge UI:** Enhanced the app's visual depth by allowing the navigation bar background to extend behind system buttons while keeping interactive icons accessible.
-- **Window Insets Refinement:** Optimized the `OnApplyWindowInsetsListener` to correctly handle system bars and keyboard (IME) transitions.
+### v12.0 — Local Cache & Advanced Administration (July 2026)
+- **Room Cache Implementation:** Integrated Room database to cache Particulars. Inventory now loads instantly and works fully offline.
+- **Selective Backup:** Enhanced the export system with category checkboxes and date range filters to minimize Firestore read costs.
+- **SuperAdmin Insights:** Launched a new dashboard for SuperAdmins showing real-time global health stats (Active companies, expiring trials, user counts).
+- **Maintenance Mode:** Added a system-wide "Kill Switch" allowing SuperAdmins to block app access with custom messages during maintenance.
+- **Targeted Broadcasts:** Announcements can now be filtered by User Role (Admin/Manager/Viewer) and Company Status (Trial/Active/Grace).
+- **Support Chat 3.0:** Implemented bidirectional unread tracking and added the ability for SuperAdmins to initiate chats directly from User Management.
+- **Safety Validations:** Forced store selection before adding particulars and enforced mandatory box linkage to prevent "orphan" items.
+- **Proactive Notifications:** Implemented a 24-hour frequency-limited alert for upcoming company expirations (Trial/Grace).
+- **Global Management:** Companies can now be Activated/Deactivated directly from the "All Companies" management list.
 
-### v10.0 — PO Tracking & Secure Attribution & Atomic Integrity & Index Optimization & Sequential PO & Enhanced Support (July 2026)
-- **Atomic Stock Deletions:** Migrated all transaction deletions to `db.runTransaction` blocks to ensure `Particular` stock, `StockLedger` entries, and the `Transaction` document are updated atomically.
-- **Enhanced Recalculation:** The "Recalculate Stocks" feature now includes a secondary validation pass to enforce the `Closing = Opening + Inward - Outward` logic on every daily ledger record.
-- **Reporting Stability:** Optimized `entries` collection group queries with explicit `orderBy` clauses and matching composite indexes to eliminate "missing index" errors during report generation.
-- **Data Drift Prevention:** Real-time stock updates now use Firestore increments within transactions rather than sequential local updates.
-- **Sequential PO Numbers**: Replaced random PO numbers with a transaction-safe sequential `PO-XXXXX` system.
-- **Support Chat 2.0**: Implemented a Bubble UI with relative timestamps and a centralized Admin Queue.
-- **Mandatory Updates**: Enforced strict version control; users must update to the latest version to log in.
-- **Full Company Backup**: Added a comprehensive "Full Data Backup" to Excel, including Ledger and Transactions.
-- **Performance Optimization**: Integrated SXSSFWorkbook for large-scale Excel backups to prevent memory issues and parallelized Firestore data fetching.
-- **Enhanced Registration Security**: Status checks now require both Admin Email and Reference Number.
-- **SuperAdmin UI**: Added company-wise filtering for user management and delete options for registrations.
-- **Model Mapping Fixes**: Fixed Firestore `CustomClassMapper` warnings by standardizing boolean fields (`isActive`).
-- **Progress UI**: Replaced deprecated ProgressDialog with a custom themed ProgressBar.
-- **PO Numbering**: Implemented unique numeric `PO#123456` system for all reorder requests.
-- **Full Attribution**: Added tracking for "Requested by" and "Updated by" (User or Supplier) across all platforms.
-- **Enhanced Notifications**: Formal messaging templates for New, Resent, Cancelled, and Deleted actions, including PO numbers and user names.
-- **Web Portal Fixes**: Resolved permission errors for suppliers by embedding customer metadata in request documents.
-- **Registration Ref-System**: Integrated public `REG-XXXXXX` status checks on the web portal.
-- **Operational UX**: Forced browser-only link opening for mobile suppliers and restricted past-date selections for reorders.
+### v11.0 — UI UX & Edge-to-Edge Optimization (July 2026)
+- **Bottom Navigation Placement:** Fixed positioning of `BottomNavigationView` for modern Edge-to-Edge displays.
+- **Window Insets Refinement:** Optimized handling of system bars and keyboard (IME) transitions.
+
+### v10.0 — PO Tracking & Secure Attribution & Atomic Integrity (July 2026)
+- **Atomic Stock Deletions:** Migrated transaction deletions to `db.runTransaction` blocks.
+- **Sequential PO Numbers:** Replaced random PO numbers with transaction-safe sequential `PO-XXXXX` system.
+- **Support Chat 2.0:** Implemented Bubble UI with relative timestamps.
+- **Full Company Backup:** Added initial "Full Data Backup" to Excel.
 
 ### v9.0 — Reorder & Supplier Portal (July 2026)
-- **Supplier Portal**: Launched web-based portal for suppliers to acknowledge and update reorder requests via secure tokens.
+- **Supplier Portal**: Launched web-based portal for suppliers via secure tokens.
 - **Reorder Workflow**: Integrated WhatsApp/Email messaging with auto-generated portal links.
-- **Auto-Inward**: Added ability to pre-fill Inward Transactions directly from completed reorder requests.
-- **Android 14 Compatibility**: Migrated all broadcast receivers to `ContextCompat` with `RECEIVER_NOT_EXPORTED` flags for enhanced security.
-- **User Management Safety**: Prevented self-role demotion and defaulted new user creation to the "Viewer" role.
-- **Administrative Isolation**: Restricted regular Admins from viewing or editing SuperAdmin accounts.
-- **Pivot Report Optimization**: Resolved loading state hanging and moved Export actions to the Toolbar to increase viewable report space.
-- **Chart Refinement**: Unified the Y-axis scale to prevent multi-axis confusion and added real-time "Top Movers" insights.
-- **Indexing Safety**: Added proactive error handling for Firestore Index requirements with direct links for easy setup.
-
-### v8.0 — Analytics & Advanced Export (July 2026)
-- **Dashboard Charts**: Added a Line Chart at the top of the dashboard to show stock trends.
-- **Excel Export**: Implemented full support for `.xlsx` exports in both Stock Reports and Ledger.
-- **UI Consolidation**: Merged multiple export/share buttons into a single format-selector dialog.
-- **Icon-Only Actions**: Converted "Generate", "Filter", and "Reset" buttons to modern icons for space efficiency.
-- **Platform Upgrade**: Increased `minSdkVersion` to 26 to support modern Excel generation libraries.
 
 ---
 
